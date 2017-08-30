@@ -1,9 +1,20 @@
 <template>
   <div id="app" class="app">
     <div class="container">
+      <div class="row" v-for="(order, key) in countedOrder">
+        <div class="col-lg-4"></div>
+        <div class="col-lg-4">
+          <span>{{key }}</span>
+          <span>{{order.value}}, pc</span>
+          <span>{{order.total_price}}, cents</span>
+        </div>
+        <div class="col-lg-4"></div>
+      </div>
       <div class="row">
         <div class="col-lg-4"></div>
-        <div class="col-lg-4"></div>
+        <div class="col-lg-4">
+          <span>Full cost:{{fullCost}}, cents</span>
+        </div>
         <div class="col-lg-4"></div>
       </div>
       <div class="row">
@@ -17,10 +28,10 @@
               </select>
             </div>
             <div class="form-group" v-show="selectedProduct.attr_id == 2">
-              <label for="input-weight">Weight</label>
-              <input type="text" class="form-control" id="input-weight" >
+              <label for="input-weight">Weight, g</label>
+              <input type="text" class="form-control" id="input-weight" v-model.number="weightProduct">
             </div>
-            <button type="submit" class="btn btn-default" @click.prevent="addProducts">Add</button>
+            <button type="submit" class="btn btn-default" @click.prevent="addProducts" :class="{disabled: !selectedProduct.id}">Add</button>
           </form>
         </div>
         <div class="col-lg-4"></div>
@@ -38,10 +49,12 @@ export default {
           products: [],
           selectedProduct: {
               id: null,
-              weight: null,
+              sku: null,
               attr_id: null
           },
-          order: []
+          weightProduct: null,
+          order: [],
+          countedOrder: {}
       }
 
   },
@@ -54,10 +67,12 @@ export default {
       }
     },
     addProducts(){
-      this.order.push(this.selectedProduct);
+        let selectedProduct = this.selectedProduct;
+        if(this.selectedProduct.attr_id == 2) selectedProduct.weight = this.weightProduct
+      this.order.push(selectedProduct);
       this.requestToServer('order', 'post', this.order).then(
           res => {
-              console.log('res', res)
+              this.countedOrder = res.body
           }
       ).catch((err) => {
           console.log(err)
@@ -68,6 +83,15 @@ export default {
         console.log('option changed', id)
         this.selectedProduct = this.products.find(item => item.id == id)
       }
+  },
+  computed: {
+      fullCost(){
+          let fullCost = 0;
+          for (let key in this.countedOrder){
+            fullCost += this.countedOrder[key]['total_price']
+          }
+        return fullCost;
+    }
   },
   created(){
       console.log('hook created')

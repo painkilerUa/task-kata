@@ -1,31 +1,59 @@
+"use strict";
 const router = require('express').Router();
 const models = require('../models');
 
-function initRoute(io){
+function initRoute(){
     router.get('/', (req, res) => {
         res.send('Ok')
 })
     router.post('/order', (req, res) => {
         models.sales.findAll({
-            attributes: ['id', 'value', 'full_price', 'free_item_id']
+            attributes: ['sku', 'value', 'full_price', 'free_item_sku']
         }).then((data) => {
             models.products.findAll({
-                attributes: ['id', 'sku', 'attr_id']
+                attributes: ['id', 'sku', 'price', 'attr_id']
             }).then((products) => {
                 let obj = {};
-                for(sale of req.body){
-                    if(obj[sale.sku]){
-                        obj[sale.sku].value ++;
+                for(let item of req.body){
+                    let sku = item.sku;
+                    if(obj[sku]){
+                        if(obj[sku].weight){
+                            obj[sku].weight += item.weight;
+                            continue;
+                        }
+                        obj[sku].value ++;
                     }else{
-                        obj[sale.sku].value = 1;
-                        obj[sale.sku].attr_id = sale.attr_id;
-                        obj[sale.sku].weight = sale.weight ? sale.weight : null;
+                        obj[sku]= {
+                            value: 1,
+                            attr_id: item.attr_id,
+                            weight: item.weight ? item.weight : null
+                        }
                     }
                 }
-                obj
-                // products
-                // data
-                req.body
+                for(let sale of data){
+                    let sku = sale.sku;
+                    if(!obj[sku]) continue;
+                    let pakage = Math.floor(obj[sku]['value'] / sale.value)
+                    obj[sku]['count'] = obj[sku]['value'] - pakage * sale.value;
+                    obj[sku]['total_price'] = pakage * sale.full_price;
+                    obj[sku]['free_item_sku'] = sale['free_item_sku']
+
+                }
+
+                for(let product of products){
+                    let sku = product.sku;
+                    if(!obj[sku]) continue;
+                    if(obj[sku]['weight']){
+                        obj[sku]['total_price'] = Math.round(obj[sku]['weight'] * product.price)/1000
+                        continue;
+                    }
+                    if(obj[sku]['count'] !== undefined){
+                        obj[sku]['total_price'] += obj[sku]['count'] * product.price;
+                    }else{
+                        obj[sku]['total_price'] = obj[sku]['value'] * product.price;
+                    }
+                }
+                res.send(obj)
             })
         }).catch((err) => {
             console.log(err)
