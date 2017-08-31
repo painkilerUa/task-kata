@@ -9,7 +9,7 @@ module.exports = (sequelize, DataTypes) => {
         },
         value: DataTypes.INTEGER,
         full_price: DataTypes.INTEGER,
-        free_item_SKU: DataTypes.STRING
+        free_item_sku: DataTypes.STRING
     }, {underscored: true});
 
     return Sales;

@@ -20,6 +20,13 @@
       <div class="row">
         <div class="col-lg-4"></div>
         <div class="col-lg-4">
+          <span>Free items:{{freeItems}}, cents</span>
+        </div>
+        <div class="col-lg-4"></div>
+      </div>
+      <div class="row">
+        <div class="col-lg-4"></div>
+        <div class="col-lg-4">
           <form>
             <div class="form-group">
               <select class="custom-select" @change="selectProduct($event.target.value)">
@@ -61,12 +68,13 @@ export default {
   methods: {
     requestToServer(urlEnd, type, payload = {}){
       if(type == 'get'){
-        return Vue.http[type]('http://localhost:8444/' + urlEnd)
+        return Vue.http[type]('http://localhost:1444/' + urlEnd)
       }else{
-        return Vue.http[type]('http://localhost:8444/' + urlEnd, payload)
+        return Vue.http[type]('http://localhost:1444/' + urlEnd, payload)
       }
     },
     addProducts(){
+        if(!this.selectedProduct.id) return
         let selectedProduct = this.selectedProduct;
         if(this.selectedProduct.attr_id == 2) selectedProduct.weight = this.weightProduct
       this.order.push(selectedProduct);
@@ -91,7 +99,16 @@ export default {
             fullCost += this.countedOrder[key]['total_price']
           }
         return fullCost;
-    }
+    },
+      freeItems(){
+          let freeItems = [];
+          for (let key in this.countedOrder){
+              if(this.countedOrder[key]['free_item_sku']){
+                  freeItems.push(this.countedOrder[key]['free_item_sku']);
+              }
+          }
+          return freeItems.join(',')
+      }
   },
   created(){
       console.log('hook created')

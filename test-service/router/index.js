@@ -1,11 +1,20 @@
 "use strict";
 const router = require('express').Router();
 const models = require('../models');
+const fs = require('fs');
 
 function initRoute(){
     router.get('/', (req, res) => {
-        res.send('Ok')
-})
+        fs.readFile('./test-service/public/index.html', (err, data) => {
+            if (err){
+                console.log(err)
+                res.status(501).send('Error 501')
+            }
+            res.end(data)
+        });
+
+    })
+
     router.post('/order', (req, res) => {
         models.sales.findAll({
             attributes: ['sku', 'value', 'full_price', 'free_item_sku']
@@ -13,47 +22,48 @@ function initRoute(){
             models.products.findAll({
                 attributes: ['id', 'sku', 'price', 'attr_id']
             }).then((products) => {
-                let obj = {};
+                let order = {};
                 for(let item of req.body){
                     let sku = item.sku;
-                    if(obj[sku]){
-                        if(obj[sku].weight){
-                            obj[sku].weight += item.weight;
+                    if(order[sku]){
+                        if(order[sku].weight){
+                            order[sku].weight += item.weight;
                             continue;
                         }
-                        obj[sku].value ++;
+                        order[sku].value ++;
                     }else{
-                        obj[sku]= {
+                        order[sku]= {
                             value: 1,
                             attr_id: item.attr_id,
                             weight: item.weight ? item.weight : null
                         }
                     }
                 }
+
                 for(let sale of data){
                     let sku = sale.sku;
-                    if(!obj[sku]) continue;
-                    let pakage = Math.floor(obj[sku]['value'] / sale.value)
-                    obj[sku]['count'] = obj[sku]['value'] - pakage * sale.value;
-                    obj[sku]['total_price'] = pakage * sale.full_price;
-                    obj[sku]['free_item_sku'] = sale['free_item_sku']
+                    if(!order[sku]) continue;
+                    let pakage = Math.floor(order[sku]['value'] / sale.value)
+                    order[sku]['count'] = order[sku]['value'] - pakage * sale.value;
+                    order[sku]['total_price'] = pakage * sale.full_price;
+                    order[sku]['free_item_sku'] = order[sku]['value'] >= sale.value ? sale.free_item_sku : null
 
                 }
 
                 for(let product of products){
                     let sku = product.sku;
-                    if(!obj[sku]) continue;
-                    if(obj[sku]['weight']){
-                        obj[sku]['total_price'] = Math.round(obj[sku]['weight'] * product.price)/1000
+                    if(!order[sku]) continue;
+                    if(order[sku]['weight']){
+                        order[sku]['total_price'] = Math.round(order[sku]['weight'] * product.price)/1000
                         continue;
                     }
-                    if(obj[sku]['count'] !== undefined){
-                        obj[sku]['total_price'] += obj[sku]['count'] * product.price;
+                    if(order[sku]['count'] !== undefined){
+                        order[sku]['total_price'] += order[sku]['count'] * product.price;
                     }else{
-                        obj[sku]['total_price'] = obj[sku]['value'] * product.price;
+                        order[sku]['total_price'] = order[sku]['value'] * product.price;
                     }
                 }
-                res.send(obj)
+                res.send(order)
             })
         }).catch((err) => {
             console.log(err)
@@ -71,11 +81,5 @@ function initRoute(){
     return router;
 }
 
-// class Checkout {
-//     constructor(order){
-//         this.order = order;
-//     }
-//
-// }
 
 module.exports = initRoute;

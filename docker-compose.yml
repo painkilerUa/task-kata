@@ -1,0 +1,35 @@
+version: "2"
+networks:
+  backend:
+
+services:
+    test-service:
+      build: "./test-service"
+      ports:
+         - "1444:8444"
+      restart: always
+      volumes:
+        - "./test-service:/app"
+      environment:
+        DEVELOPMENT: ""
+      networks:
+        backend:
+          aliases:
+            - test-service
+
+    test-mysql:
+        image: "mysql"
+        ports:
+            - "33001:3306"
+        restart: always
+        command: "mysqld --character-set-server=utf8 --collation-server=utf8_unicode_ci --init-connect='SET NAMES UTF8'"
+        environment:
+          MYSQL_ROOT_PASSWORD: "developer"
+          MYSQL_DATABASE: "kata"
+        volumes:
+            - "./mysql/custom.cnf:/etc/mysql/conf.d/custom.cnf"
+            - "./mysql/data:/var/lib/mysql"
+        networks:
+          backend:
+            aliases:
+              - test-mysql
